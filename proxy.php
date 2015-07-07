@@ -110,7 +110,10 @@ function proxy_request($url, $data, $method) {
         $result = ''; 
         while(!feof($fp)) {
             // receive the results of the request
-            $result .= fgets($fp, 128);
+            // 解决fis启动的php-cgi不能传输Transfer-Encoding: chunked问题
+            if(preg_match('/^[a-fA-F0-9]+\r\n$/', $line) == false){
+                $result .= $line;
+            }
         }
     }
     else { 
