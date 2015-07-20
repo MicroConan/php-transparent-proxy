@@ -8,10 +8,16 @@
 /--------------------------------------------------------------*/
 
 // Destination URL: Where this proxy leads to.
-$destinationURL = 'http://www.otherdomain.com/backend.php';
+//$destinationURL = 'http://www.otherdomain.com/backend.php';
+/*
+* 待解决，登录之后无法数据提交的问题
+*
+*/
+$remote_host = 'http://test.diditaxi.com.cn';
+$destinationURL = $remote_host . $_SERVER['REQUEST_URI'];
 
 // The only domain from which requests are authorized.
-$RequestDomain = 'mydomain.com';
+$RequestDomain = 'baidu.com';
 
 // That's it for configuration!
 
@@ -40,13 +46,15 @@ if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
     $ip = $_SERVER['REMOTE_ADDR'];
     //echo "REMOTE_ADDR: ".$ip;
 }
-
+/*
 preg_match('@^(?:http://)?([^/]+)@i', $_SERVER['HTTP_REFERER'], $matches);
 $host = $matches[1];
 preg_match('/[^.]+\.[^.]+$/', $host, $matches);
 $domainName = "{$matches[0]}";
+*/
+// if($domainName == $RequestDomain) {
+if( true ) {
 
-if($domainName == $RequestDomain) {
 
     $method = $_SERVER['REQUEST_METHOD'];
     $response = proxy_request($destinationURL, ($method == "GET" ? $_GET : $_POST), $method);
@@ -55,7 +63,9 @@ if($domainName == $RequestDomain) {
     foreach($headerArray as $headerLine) {
      header($headerLine);
     }
-    echo $response['content'];
+
+            
+    echo str_replace($remote_host, '', $response['content']);
  
   } else {
 
@@ -110,11 +120,10 @@ function proxy_request($url, $data, $method) {
         $result = ''; 
         while(!feof($fp)) {
             // receive the results of the request
-            // 解决fis启动的php-cgi不能传输Transfer-Encoding: chunked问题
-            if(preg_match('/^[a-fA-F0-9]+\r\n$/', $line) == false){
-                $result .= $line;
-            }
+            $line = fgets($fp, 128);
+            $result .= $line;
         }
+
     }
     else { 
         return array(
@@ -131,7 +140,9 @@ function proxy_request($url, $data, $method) {
  
     $header = isset($result[0]) ? $result[0] : '';
     $content = isset($result[1]) ? $result[1] : '';
- 
+    // 解决fis不能传输Transfer-Encoding: chunked问题
+    $content = preg_split('/(\r\n)?[a-f0-9]+\r\n/i', $content);
+    $content = implode('', $content);
     // return as structured array:
     return array(
         'status' => 'ok',
